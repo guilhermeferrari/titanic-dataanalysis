@@ -180,6 +180,147 @@ ggplot(data.combined[1:891, ], aes(x = family.size, fill = survived)) +
   labs(fill = "Survived")
 
 
+# Converter de Factor para Inteiro
+# usar as.numeric diretamente so converte os indices do Factor
+temp.convTest <- as.numeric(levels(data.combined$family.size))[data.combined$family.size]
+summary(temp.convTest)
+
+# Analisar a variavel ticket
+str(data.combined$ticket)
+
+# Ticket eh um Factor com 929 niveis, considerando que existem 1309 linhas de dados
+# Sao muitos niveis para ser um Factor, entao sera tratado como string
+data.combined$ticket <- as.character(data.combined$ticket)
+data.combined$ticket[1:20]
+
+# Aparentemente os dados nao estao estruturados, tentar encontrar um padrao entao
+# Analisar o primeiro char de cada ticket
+ticket.first.char <- ifelse(data.combined$ticket == "", " ", substr(data.combined$ticket, 1, 1))
+unique(ticket.first.char)
+
+data.combined$ticket.first.char <- as.factor(ticket.first.char)
+
+ggplot(data.combined[1:891,], aes(x = ticket.first.char, fill = survived)) + 
+  geom_bar() +
+  ggtitle("Survivability by ticket.first.char") +
+  xlab("ticket.first.char") +
+  ylab("Total Count") +
+  ylim(0,350) +
+  labs(fill = "Survived")
+
+ggplot(data.combined[1:891,], aes(x = ticket.first.char, fill = survived)) +
+  geom_bar() +
+  facet_wrap(~pclass) +
+  ggtitle("Pclass") +
+  xlab("ticket.first.char") +
+  ylab("Total count") +
+  labs(fill = "Survived")
+
+ggplot(data.combined[1:891,], aes(x = ticket.first.char, fill = survived)) +
+  geom_bar() +
+  facet_wrap(~pclass + title) +
+  ggtitle("Pclass, Title") +
+  xlab("ticket.first.char") +
+  ylab("Total count") +
+  labs(fill = "Survived")
+
+# Aparentemente nao ha uma relacao direta entre os sobreviventes e o numero do ticket
+# -----------------------------------------------------------------------------------
+
+
+# Analisar as taxas pagas (Fares)
+summary(data.combined$fare)
+length(unique(data.combined$fare))
+
+ggplot(data.combined[1:891,], aes(x = fare)) +
+  geom_histogram(binwidth = 5) +
+  ggtitle("Combined Fare Distribution") +
+  xlab("Fare") +
+  ylab("Total count")
+
+ggplot(data.combined[1:891,], aes(x = fare, fill = survived)) +
+  geom_histogram(binwidth = 5) +
+  facet_wrap(~pclass + title) +
+  ggtitle("Pclass, Title") +
+  xlab("fare") +
+  ylab("Total count") +
+  labs(fill = "Survived")
+
+# Nada muito relevante
+# --------------------
+
+# Analise da variavel Cabin
+str(data.combined$cabin)
+
+# Por possuir varios Factor provavelmente nao deveria ser um. Converter para char
+data.combined$cabin <- as.character(data.combined$cabin)
+data.combined$cabin[1:100]
+
+# Trocar cabines vazias por "U"
+data.combined[which(data.combined$cabin == ""), "cabin"] <- "U"
+
+# Pegar primeiro char
+cabin.first.char <- as.factor(substr(data.combined$cabin, 1, 1))
+str(cabin.first.char)
+levels(cabin.first.char)
+
+data.combined$cabin.first.char <- cabin.first.char
+
+ggplot(data.combined[1:891, ], aes(x = cabin.first.char, fill = survived)) +
+  geom_bar() +
+  ggtitle("Survivability by cabin.first.chat") +
+  xlab("cabin.first.char") +
+  ylab("Total count") +
+  labs(fill = "Survived")
+
+ggplot(data.combined[1:891, ], aes(x = cabin.first.char, fill = survived)) +
+  geom_bar() +
+  facet_wrap(~pclass + title) +
+  ggtitle("Pclass, Title") +
+  xlab("cabin.first.char") +
+  ylab("Total count") +
+  labs(fill = "Survived")
+
+# Pessoas com mais de uma cabine
+data.combined$cabin.multiple <- as.factor(ifelse(str_detect(data.combined$cabin, " "), "Y", "N"))
+
+ggplot(data.combined[1:891,], aes(x = cabin.multiple, fill = survived)) +
+  geom_bar() +
+  facet_wrap(~pclass + title) +
+  ggtitle("Pclass, Title") +
+  xlab("cabin.multiple") +
+  ylab("Total Count") +
+  labs(fill = "Survived")
+
+# Aparentemente nada relevante
+# ----------------------------
+
+
+# Avaliar onde a pessoa embarcou
+str(data.combined$embarked)
+levels(data.combined$embarked)
+
+ggplot(data.combined[1:891, ], aes(x = embarked, fill = survived)) +
+  geom_bar() +
+  facet_wrap(~pclass + title) +
+  ggtitle("Pclass, Title") +
+  xlab("embarked") +
+  ylab("Total Count") +
+  labs(fill = "Survived")
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
