@@ -10,7 +10,7 @@ Desenvolvido com base na serie de videos: [Intro to Data Science with R](https:/
 Por ser uma série de video antiga, algumas coisas devem ser levadas em consideração. Apesar do conjunto de dados estar disponível no [kaggle](kaggle.com), os dados foram atualizados com o passar do tempo, causando algumas inconsistencias na hora de acompanhar o video. 
 Para evitar problemas, o autor dos videos disponibiliza os dados usados, que são os mesmos encontrados nesse repositório.
 
-## Problemas encontrados
+## Gráficos
 
 ### Erro na hora de plotar gráficos
 Logo no primeiro plot já aparece um erro relacionado ao uso de `geom_histogram()`.
