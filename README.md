@@ -6,7 +6,9 @@ Desenvolvido com base na serie de videos: [Intro to Data Science with R](https:/
 
 # Recomendações 
 [Getting In Shape For The Sport Of Data Science](https://www.youtube.com/watch?v=kwt6XEh7U3g)
+
 [Machine learning - Random forests](https://www.youtube.com/watch?v=3kYujfDgmNk)
+
 [6.4 Random Forest Feature Importance | 6 Kernels, Random Forest | Pattern Recognition Class 2012](https://www.youtube.com/watch?v=WE67TSz-a7s)
 
 # Problemas encontrados
