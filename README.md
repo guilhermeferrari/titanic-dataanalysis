@@ -11,6 +11,8 @@ Desenvolvido com base na serie de videos: [Intro to Data Science with R](https:/
 
 [6.4 Random Forest Feature Importance | 6 Kernels, Random Forest | Pattern Recognition Class 2012](https://www.youtube.com/watch?v=WE67TSz-a7s)
 
+[Canal: Jeff Leek](https://www.youtube.com/user/jtleek2007)
+
 # Problemas encontrados
 
 ## Utilizando os dados

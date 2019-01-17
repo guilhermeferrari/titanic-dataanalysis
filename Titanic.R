@@ -376,6 +376,94 @@ rf.7 <- randomForest(x = rf.train.7, y = rf.label, importance = TRUE, ntree = 10
 rf.7
 varImpPlot(rf.7)
 
+# ---------------------
+#
+# Inicio Video 5
+#
+#----------------------
+
+# 
+test.submit.df <- data.combined[892:1309, c("pclass", "title", "family.size")]
+
+# Realizar a analise dos dados de teste
+rf.5.preds <- predict(rf.5, test.submit.df)
+table(rf.5.preds)
+
+# Arquivo CSV para kaggle
+submit.df <- data.frame(PassengerId = rep(892:1309), Survived = rf.5.preds)
+
+write.csv(submit.df, file = "RF_SUB_20190114_1.csv", row.names = FALSE)
+
+# O resultado do kaggle foi diferente do que sugeria  OOB do rf.5
+# 79.42% kaggle vs 81.82% OOB
+rf.5
+
+library(caret)
+help(package = "caret")
+
+library(doSNOW)
+
+set.seed(2348)
+cv.10.folds <- createMultiFolds(rf.label, k = 10, times = 10)
+
+table(rf.label)
+342/549
+
+table(rf.label[cv.10.folds[[33]]])
+308/494
+
+ctrl.1 <- trainControl(method = "repeatedcv", number = 10, repeats = 10, index = cv.10.folds)
+
+#Configurar doSNOW para treinamento multi-core
+cl <- makeCluster(6, type = "SOCK")
+registerDoSNOW(cl)
+
+set.seed(34324)
+rf.5.cv.1 <- train(x = rf.train.5, y = rf.label, method = "rf", tuneLength = 3, ntree = 1000,
+                  trControl = ctrl.1)
+stopCluster(cl)
+
+rf.5.cv.1
+
+# Tentar com 5-fold repeated 10 times
+set.seed(5983)
+cv.5.folds <- createMultiFolds(rf.label, k = 5, times = 10)
+
+ctrl.2 <- trainControl(method = "repeatedcv", number = 5, repeats = 10, index = cv.5.folds)
+
+cl <- makeCluster(6, type = "SOCK")
+registerDoSNOW(cl)
+
+set.seed(89472)
+rf.5.cv.2 <- train(x = rf.train.5, y = rf.label, method = "rf", tuneLength = 3,
+                   ntree = 1000, trControl = ctrl.2)
+stopCluster(cl)
+
+rf.5.cv.2
+
+
+# 3-fold
+
+set.seed(37596)
+cv.3.folds <- createMultiFolds(rf.label, k = 3, times = 10)
+
+ctrl.3 <- trainControl(method = "repeatedcv", number = 3, repeats = 10, index = cv.3.folds)
+
+cl <- makeCluster(6, type = "SOCK")
+registerDoSNOW(cl)
+
+set.seed(94622)
+rf.5.cv.3 <- train(x = rf.train.5, y = rf.label, method = "rf", tuneLength = 3,
+                   ntree = 64, trControl = ctrl.3)
+stopCluster(cl)
+
+rf.5.cv.3
+
+
+
+
+
+
 
 
 
