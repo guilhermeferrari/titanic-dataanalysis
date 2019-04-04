@@ -1,3 +1,12 @@
+# Carregar todas as bibliotecas no comeco. 
+library(ggplot2)
+library(stringr)
+library(randomForest)
+library(caret)
+library(doSNOW)
+library(rpart)
+library(rpart.plot)
+
 train <- read.csv("train.csv", header = TRUE)
 test <- read.csv("test.csv", header = TRUE)
 
@@ -14,9 +23,6 @@ data.combined$pclass <- as.factor(data.combined$pclass)
 
 table(data.combined$survived)
 table(data.combined$pclass)
-
-# carrega bilioteca
-library(ggplot2)
 
 # --- relacao sobreviventes com relacao a PCLASS
 # Hipotese - Pessoas ricas sobrevivem com uma maior taxa
@@ -41,7 +47,7 @@ dup.names <- as.character(data.combined[which(duplicated(as.character(data.combi
 data.combined[which(data.combined$name %in% dup.names), ]
 
 # Identificar os nomes com Miss. Mr. ...
-library(stringr)
+
 
 
 
@@ -311,11 +317,11 @@ ggplot(data.combined[1:891, ], aes(x = embarked, fill = survived)) +
 
 # ---------------------
 #
-# Inicio Video 4
+# Video 4
 #
 #----------------------
 
-library(randomForest)
+
 
 # Treinar o algoritmo com os parametros pclass e title
 rf.train.1 <- data.combined[1:891, c("pclass", "title")]
@@ -378,9 +384,18 @@ varImpPlot(rf.7)
 
 # ---------------------
 #
-# Inicio Video 5
+# Video 5
 #
 #----------------------
+
+# Antes do desenvolvimento de 'recursos de engenharia' (features engineering)
+# precisamos estabelecer uma metodologia para estimar nossa taxa de erro no conjunto de teste.
+# Isso é importante para evitar 'overfit'. O conceito aqui eh que podemos treinar
+# o algoritmo ate atingir quase 100% no nosso conjunto de testes. Porem, uma taxa de acertos
+# tao alta, dificilmente eh real. O que acontece no overfit eh que treinamos o algoritmo de uma forma
+# muito especifica, para um conjunto especifico de dados. Dessa forma, quando exposto a um
+# conjunto diferente, a taxa de erro acaba sendo muito maior.
+
 
 # 
 test.submit.df <- data.combined[892:1309, c("pclass", "title", "family.size")]
@@ -398,11 +413,13 @@ write.csv(submit.df, file = "RF_SUB_20190114_1.csv", row.names = FALSE)
 # 79.42% kaggle vs 81.82% OOB
 rf.5
 
-library(caret)
+# Utilizando a biblioteca caret para trabalhar com cross-validation (CV)
 help(package = "caret")
 
-library(doSNOW)
-
+# Pelas pesquisas, 10-fold CV repetido 10 vezes eh a melhor maneira de comecar.
+# Este processo consiste em pegar seu conjunto de dados, dividi-lo em 10 partes (10-fold),
+# dessas 10, uma sera usada como conjunto de teste, e o algoritmo ira treinar com base nas 9 outras
+# e validar no conjunto separado. Esse processo sera feito 10 vezes (10 times).
 set.seed(2348)
 cv.10.folds <- createMultiFolds(rf.label, k = 10, times = 10)
 
@@ -456,15 +473,197 @@ set.seed(94622)
 rf.5.cv.3 <- train(x = rf.train.5, y = rf.label, method = "rf", tuneLength = 3,
                    ntree = 64, trControl = ctrl.3)
 stopCluster(cl)
-
 rf.5.cv.3
 
 
+# ---------------------
+#
+# Video 6 - Exploratory Modeling 2
+#
+#----------------------
 
 
+# Vamos usar uma single decision tree para entender melhor o que esta acontecendo com
+# as nossas features. Random Forests sao melhores do que single trees, 
+# mas sao mais faceis para entender.
+
+# Create utility function
+
+rpart.cv <- function(seed, training, labels, ctrl) {
+  cl <- makeCluster(6, type = "SOCK")
+  registerDoSNOW(cl)
+  
+  set.seed(seed)
+  
+  rpart.cv <- train(x = training, y = labels, method = "rpart", tuneLength = 30,
+                    trControl = ctrl)
+  
+  stopCluster(cl)
+  
+  return (rpart.cv)
+}
+
+# Grab features
+features <- c("pclass", "title", "family.size")
+rpart.train.1 <- data.combined[1:891, features]
+
+# Run CV and check out results
+rpart.1.cv.1 <- rpart.cv(94622, rpart.train.1, rf.label, ctrl.3)
+rpart.1.cv.1
+
+# Plot
+prp(rpart.1.cv.1$finalModel, type = 0, extra = 1, under = TRUE)
 
 
+# Pelo plot, podemos analisar:
+#     1 - Com uma taxa de acerto de 83.2%, os titulos
+#         Mr. e Other pereceram.
+#     2 - Titulos de Master, Miss e Mrs, na 1a e 2a classe
+#         estao previstos para sobreviver com uma taxa de acerto de 94.9%
+#     3 - Titulos de Master, Miss e Mrs na 3a classe com family.size igual a 5, 6, 7 e 8
+#         estao previstos para perecer com 100% de certeza
+#     4 - Titulos de Master, Miss e Mrs na 3a classe com family.size NAO igual a 5, 6, 7 e 8
+#         estao previstos para sobreviver com uma taxa de acerto de 59.6%
+#
+# ---
+#
+# Ainda seguindo a analise do plot, ha um forte indicativo de overfitting
+# com relacao ao tamanho da familia:
+#   
+#   O algoritmo faz a suposicao de sobrevivencia com relacao ao tamanho da familia,
+# obtendo uma precisao de 100% para determinados tamanhos de familia.
+# Porem, o numero de amostrar para essas quantidades de familia eh muito pequeno, logo, o algoritmo
+# faz uma suposicao baseada em poucas amostras. E quando aplicado a um conjunto maior de dados,
+# Eh bem provavel que havera discrepancia na acuracia observada no conjunto de teste e na submissao
+# ao Kaggle
 
+# Tanto RandomForest como rpart confirmar a importancia do titulo
+table(data.combined$title)
+
+# Parse out last name and title
+data.combined[1:25, "name"]
+
+name.splits <- str_split(data.combined$name, ",")
+name.splits[1]
+last.names <- sapply(name.splits, "[", 1)
+last.names[1:10]
+
+# Add last names no conjunto de dados para possivel uso futuramente
+data.combined$last.name <- last.names
+
+#
+name.splits <- str_split(sapply(name.splits, "[", 2), " ")
+name.splits[1]
+titles <- sapply(name.splits, "[", 2)
+unique(titles)
+
+# Olhar as pessoas que possuem o titulo 'the'
+data.combined[which(titles == 'the'),]
+
+# Remapear titles
+titles[titles %in% c("Dona.", "the")] <- "Lady."
+titles[titles %in% c("Ms.", "Mlle.")] <- "Miss."
+titles[titles == "Mme."] <- "Mrs."
+titles[titles %in% c("Jonkheer.", "Don.")] <- "Sir."
+titles[titles %in% c("Col.", "Capt.", 'Major.')] <- "Officer"
+table(titles)
+
+# Transformar em factor
+data.combined$new.title <- as.factor(titles)
+
+# Ver a nova versao de titles
+ggplot(data.combined[1:891,], aes(x = new.title, fill = survived)) +
+  geom_bar() +
+  facet_wrap(~ pclass) +
+  ggtitle("Survival rates for new.title por pclass")
+
+# Collapse titles based on visual analysis
+indexes <- which(data.combined$new.title == "Lady.")
+data.combined$new.title[indexes] <- "Mrs."
+
+indexes <- which(data.combined$new.title == "Dr." | 
+                   data.combined$new.title == "Rev." |
+                   data.combined$new.title == "Sir." |
+                   data.combined$new.title == "Officer")
+data.combined$new.title[indexes] <- "Mr."
+
+ggplot(data.combined[1:891,], aes(x = new.title, fill = survived)) +
+  geom_bar() +
+  facet_wrap(~ pclass) +
+  ggtitle("Survival rates for new.title por pclass")
+
+
+# Pegar as features identificadas
+features <- c("pclass", "new.title", "family.size")
+rpart.train.2 <- data.combined[1:891, features]
+
+# Rodar cross-validation e ver resultados
+rpart.2.cv.1 <- rpart.cv(94622, rpart.train.2, rf.label, ctrl.3)
+rpart.2.cv.1
+
+# Plotar
+prp(rpart.2.cv.1$finalModel, type = 0, extra = 1, under = TRUE)
+
+# Analisar Mr. na primeira classe
+indexes.first.mr <- which(data.combined$new.title == "Mr." & data.combined$pclass == "1")
+first.mr.df <- data.combined[indexes.first.mr,]
+summary(first.mr.df)
+
+# Ha um registro de uma mulher como Mr.
+first.mr.df[first.mr.df$sex == "female",]
+
+# Corrigir os dados
+indexes <- which(data.combined$new.title == "Mr." & data.combined$sex == "female")
+data.combined$new.title[indexes] <- "Mrs."
+
+# Verificar se ha mais algum problema com genero.
+summary(data.combined$new.title)
+
+length(which(data.combined$sex == "female" & 
+               (data.combined$new.title == "Master." |
+                data.combined$new.title == "Mr." )))
+
+length(which(data.combined$sex == "male" & 
+               (data.combined$new.title == "Mrs." |
+                  data.combined$new.title == "Miss.")))
+
+# Atualizar os dados
+indexes.first.mr <- which(data.combined$new.title == "Mr." & data.combined$pclass == "1")
+first.mr.df <- data.combined[indexes.first.mr,]
+
+# Analisar sobrevivencia de Mr. na 1 classe
+summary(first.mr.df[first.mr.df$survived == "1,"])
+View(first.mr.df[first.mr.df$survived == "1",])
+
+# Ver algumas das taxas altas (valores)
+indexes <- which(data.combined$ticket == "PC 17755" | 
+                 data.combined$ticket == "PC 17611" |
+                 data.combined$ticket == "113760")
+View(data.combined[indexes,])
+
+# Ver as taxas de sobrevivencia para primeira classe, pela taxa, para Mr.
+ggplot(first.mr.df, aes(x = fare, fill = survived)) +
+  geom_density(alpha = 0.5) +
+  ggtitle("1st class 'Mr.' Survival rate by fare")
+
+# Desenvolver features baseadas em todos os passageiros com o mesmo ticket
+ticket.party.size <- rep(0, nrow(data.combined))
+avg.fare <- rep(0.0, nrow(data.combined))
+tickets <- unique(data.combined$ticket)
+
+for(i in 1:length(tickets)) {
+  current.ticket <- tickets[i]
+  party.indexes <- which(data.combined$ticket == current.ticket)
+  current.avg.fare <- data.combined[party.indexes[1], "fare"] / length(party.indexes)
+  
+  for (k in 1:length(party.indexes)) {
+    ticket.party.size[party.indexes[k]] <- length(party.indexes)
+    avg.fare[party.indexes[k]] <- current.avg.fare
+  }
+}
+
+data.combined$ticket.party.size <- ticket.party.size
+data.combined$avg.fare <- avg.fare
 
 
 
